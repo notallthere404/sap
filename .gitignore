@@ -56,3 +56,7 @@ dkms.conf
 
 # build output
 build/
+
+# IDE
+.vscode/
+.clang-format

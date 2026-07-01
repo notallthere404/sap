@@ -1,40 +1,27 @@
-#include <zephyr/device.h>
-#include <zephyr/devicetree.h>
-#include <zephyr/drivers/sensor.h>
-#include <zephyr/drivers/sensor_data_types.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(Sensor_Array_Plants, LOG_LEVEL_INF);
+#include "probe.h"
 
-#define AIR_NODE DT_NODELABEL(bme280)
-#define LIGHT_NODE DT_NODELABEL(veml7700)
-
-const struct device* const dev_air = DEVICE_DT_GET(AIR_NODE);
-const struct device* const dev_light = DEVICE_DT_GET(LIGHT_NODE);
-
-/*
-        Defines sensor read instances
-*/
-SENSOR_DT_READ_IODEV(iodev_air, AIR_NODE, {SENSOR_CHAN_AMBIENT_TEMP, 0},
-                     {SENSOR_CHAN_PRESS, 0}, {SENSOR_CHAN_HUMIDITY, 0});
-
-SENSOR_DT_READ_IODEV(iodev_light, LIGHT_NODE, {SENSOR_CHAN_LIGHT, 0});
-
-RTIO_DEFINE(ctx, 1, 1);
-
-static bool device_check(const struct device* dev) {
-    if (!device_is_ready(dev)) {
-        LOG_ERR("Device %s not ready", dev->name);
-        return false;
-    }
-    LOG_INF("Found device %s", dev->name);
-    return true;
-}
+LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
 
 int main(void) {
-    if (!device_check(dev_air) || !device_check(dev_light)) {
-        return 1;
+  if (sensors_init() != 0) {
+    return 1;
+  }
+
+  int rc = 0;
+
+  while (1) {
+    reading r = {0};
+    if (read_air_probe(&r) != 0 || read_light_probe(&r) != 0) {
+      LOG_WRN("read failed, skipping cycle");
+    } else {
+      LOG_INF("T %.2f  P %.2f  H %.2f  L %u", (double)r.temp, (double)r.pres,
+              (double)r.humi, r.lux);
     }
-    return 0;
+    k_sleep(K_MSEC(2000));
+  }
+
+  return 0;
 }
