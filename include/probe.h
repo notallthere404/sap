@@ -4,17 +4,17 @@
 #include <stdint.h>
 #include <time.h>
 
-typedef struct reading {
+typedef struct reading_t {
   int64_t timestamp_ms;
   float temp;
   float pres;
   float humi;
   uint32_t lux;
-} reading;
+} reading_t;
 
-int sensors_init(void);
+int probes_init(void);
 
-int read_air_probe(reading *);
-int read_light_probe(reading *);
+int read_air_probe(reading_t *);
+int read_light_probe(reading_t *);
 
 #endif
