@@ -2,6 +2,8 @@
 
 #include <errno.h>
 #include <math.h>
+#include <stdint.h>
+
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/sensor.h>

@@ -1,5 +1,7 @@
 #include "diode.h"
 
+#include <errno.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <zephyr/device.h>
@@ -16,16 +18,21 @@ LOG_MODULE_REGISTER(diodes, LOG_LEVEL_INF);
 #define YELLOW_DIODE DT_NODELABEL(ext_yellow_led)
 #define GREEN_DIODE DT_NODELABEL(ext_green_led)
 
+/* PWM channel references per diode */
 static const struct pwm_dt_spec pwm_red = PWM_DT_SPEC_GET(RED_DIODE);
 static const struct pwm_dt_spec pwm_yel = PWM_DT_SPEC_GET(YELLOW_DIODE);
 static const struct pwm_dt_spec pwm_gre = PWM_DT_SPEC_GET(GREEN_DIODE);
 
+/* App state mirrored for the blink work handler */
 static app_state_t diode_state = APP_STATE_STANDBY;
 static bool blink_state;
 
 static void diode_work_handler(struct k_work *work);
 static K_WORK_DELAYABLE_DEFINE(diode_work, diode_work_handler);
 
+/*
+    Sets diode brightness as PWM duty cycle percentage
+*/
 static int diode_set_percent(const struct pwm_dt_spec *pwm, uint8_t pct) {
   if (pct > 100) {
     pct = 100;
@@ -74,6 +81,9 @@ static bool pwm_check(const struct pwm_dt_spec *pwm) {
   return true;
 }
 
+/*
+    Ensure all diode PWM channels are operational during startup
+*/
 int diodes_init(void) {
   if (!pwm_check(&pwm_red) || !pwm_check(&pwm_yel) || !pwm_check(&pwm_gre)) {
     return -ENODEV;
@@ -85,13 +95,15 @@ int diodes_init(void) {
   return 0;
 }
 
+/*
+    Maps app state to diode pattern. Solid states are set directly,
+    blinking states are delegated to the blink work handler
+*/
 void diode_set_state(app_state_t state) {
   diode_state = state;
   blink_state = false;
 
-  /*
-    Reset blinking state
-  */
+  /* Reset blinking state */
   k_work_cancel_delayable(&diode_work);
 
   switch (state) {
@@ -134,6 +146,9 @@ void diode_set_state(app_state_t state) {
   }
 }
 
+/*
+    Toggles the blinking diode for the current state and reschedules itself
+*/
 static void diode_work_handler(struct k_work *work) {
   ARG_UNUSED(work);
 

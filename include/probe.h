@@ -2,7 +2,6 @@
 #define PROBE_H
 
 #include <stdint.h>
-#include <time.h>
 
 typedef struct reading_t {
   int64_t timestamp_ms;

@@ -2,7 +2,7 @@
 
 Sensor Array for Plants (S.A.P) is an embedded project for the nRF52840 DK that utilizes the BME280 and VEML7700 sensors.
 
-## Hardware
+## Hardware Prototype
 
 ### Components
 
@@ -11,12 +11,13 @@ Sensor Array for Plants (S.A.P) is an embedded project for the nRF52840 DK that 
 - Jumper wires
 - Adafruit BME280 2652
 - Adafruit VEML7700 4162
-- 1 × momentary push button
-- 1 × optional momentary push button
+- 2 × momentary push button
 - 1 × LED red
 - 1 × LED yellow
 - 1 × LED green
-- 3 × Resistors 680 Ω
+- 3 × Resistors 470 Ω
+
+
 
 ### Pin Allocation
 
@@ -36,38 +37,68 @@ Sensor Array for Plants (S.A.P) is an embedded project for the nRF52840 DK that 
 flowchart TD
     DK[nRF52840 DK]
 
-    subgraph BB[Breadboard]
-        PWR["+ rail<br/>VDD 3.0 V"]
+    subgraph BB[Breadboard - sensor bus]
+        PWR["+ rail<br/>VDD / ~3.0 V"]
         GND["- rail<br/>GND"]
-        SDA["row 60<br/>SDA"]
-        SCL["row 64<br/>SCL"]
 
-        BTN1["Button 1<br/>P1.01 / D0"]
-        BTN2["Reserved Button 2<br/>P1.02 / D1"]
+        PWR46["power rail position 46"]
+        GND46["ground rail position 46"]
 
-        RLED["Red LED<br/>P1.03 / D2"]
-        YLED["Yellow LED<br/>P1.04 / D3"]
-        GLED["Green LED<br/>P1.05 / D4"]
+        PWR49["power rail position 49"]
+        GND49["ground rail position 49"]
 
-        RR["Series resistor"]
-        YR["Series resistor"]
-        GR["Series resistor"]
+        VEML_VIN["59F<br/>VEML7700 VIN"]
+        VEML_GND["61F<br/>VEML7700 GND"]
+
+        SCL["row 62<br/>SCL bus<br/>62F / 62I / 62J"]
+        SDA["row 63<br/>SDA bus<br/>63F / 63I / 63J"]
     end
 
-    BME[BME280<br/>Adafruit 2652]
-    VEML[VEML7700<br/>Adafruit 4162]
+    VEML[VEML7700<br/>Adafruit 4162<br/>soldered header]
+    BME[BME280<br/>Adafruit 2652<br/>Qwiic/STEMMA QT lead]
 
-    DK -- "VDD / VDD_nRF / ~3.0 V" --> PWR
-    DK -- "GND" --> GND
-    DK -- "P0.26 / SDA" --> SDA
-    DK -- "P0.27 / SCL" --> SCL
+    DK -- "red<br/>VDD / VDD_nRF / ~3.0 V" --> PWR46
+    PWR46 --> PWR
 
-    PWR -- "red / VIN" --> BME
-    GND -- "black / GND" --> BME
-    SDA -- "blue / SDA" --> BME
-    SCL -- "yellow / SCL" --> BME
+    DK -- "black<br/>GND" --> GND46
+    GND46 --> GND
 
-    BME -- "STEMMA QT / Qwiic" --> VEML
+    DK -- "yellow<br/>P0.27 / SCL" --> SCL
+    DK -- "blue<br/>P0.26 / SDA" --> SDA
+
+    PWR -- "wire to VIN" --> VEML_VIN
+    GND -- "wire to GND" --> VEML_GND
+    VEML_VIN -- "VIN" --> VEML
+    VEML_GND -- "GND" --> VEML
+    SCL -- "62F / SCL" --> VEML
+    SDA -- "63F / SDA" --> VEML
+
+    PWR49 --> PWR
+    GND49 --> GND
+    PWR49 -- "red / VIN" --> BME
+    GND49 -- "black / GND" --> BME
+    SCL -- "yellow / SCL 62I" --> BME
+    SDA -- "blue / SDA 63I" --> BME
+```
+
+```mermaid
+flowchart TD
+    DK[nRF52840 DK]
+
+    subgraph BB[Breadboard - controls and status LEDs]
+        GND["- rail<br/>GND"]
+
+        BTN1["Button 1<br/>Power button"]
+        BTN2["Reserved Button 2<br/>Pair button"]
+
+        RR["Red LED<br/>series resistor"]
+        YR["Yellow LED<br/>series resistor"]
+        GR["Green LED<br/>series resistor"]
+
+        RLED["Red LED"]
+        YLED["Yellow LED"]
+        GLED["Green LED"]
+    end
 
     DK -- "P1.01 / D0" --> BTN1
     BTN1 -- "active-low<br/>press connects to GND" --> GND
