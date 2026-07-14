@@ -9,6 +9,7 @@
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/sensor_data_types.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/pm/device.h>
 
 LOG_MODULE_REGISTER(sensors, LOG_LEVEL_INF);
 
@@ -30,11 +31,43 @@ RTIO_DEFINE(ctx, 1, 1);
 const struct device *const dev_air = DEVICE_DT_GET(AIR_NODE);
 const struct device *const dev_light = DEVICE_DT_GET(LIGHT_NODE);
 
+/*
+  Sets power management state to active
+*/
+static int device_resume(const struct device *dev) {
+  int err = pm_device_action_run(dev, PM_DEVICE_ACTION_RESUME);
+  switch (err) {
+  case 0:
+    LOG_INF("Device %s resuming", dev->name);
+    return 0;
+
+  case -EALREADY:
+    LOG_WRN("Device %s already resumed", dev->name);
+    return 0;
+
+  case -EBUSY:
+    LOG_ERR("Device %s busy", dev->name);
+    return err;
+
+  case -EPERM:
+    LOG_ERR("Device %s PM locked", dev->name);
+    return err;
+
+  case -ENOSYS:
+    LOG_ERR("Device %s does not implement PM", dev->name);
+    return err;
+
+  default:
+    return err;
+  }
+}
+
 static bool device_check(const struct device *dev) {
   if (!device_is_ready(dev)) {
     LOG_ERR("Device %s not ready", dev->name);
     return false;
   }
+
   LOG_INF("Found device %s", dev->name);
   return true;
 }
@@ -43,9 +76,69 @@ static bool device_check(const struct device *dev) {
     Ensure both sensors are operational during startup
 */
 int probes_init(void) {
+  int err;
+
   if (!device_check(dev_air) || !device_check(dev_light)) {
     return -ENODEV;
   }
+
+  err = device_resume(dev_air);
+  if (err != 0) {
+    return err;
+  }
+
+  err = device_resume(dev_light);
+  if (err != 0) {
+    return err;
+  }
+
+  return 0;
+}
+
+/*
+  Sets power management state to lower power
+*/
+static int device_suspend(const struct device *dev) {
+  int err = pm_device_action_run(dev, PM_DEVICE_ACTION_SUSPEND);
+  switch (err) {
+  case 0:
+    LOG_INF("Device %s suspending", dev->name);
+    return 0;
+
+  case -EALREADY:
+    LOG_WRN("Device %s already suspended", dev->name);
+    return 0;
+
+  case -EBUSY:
+    LOG_ERR("Device %s busy", dev->name);
+    return err;
+
+  case -EPERM:
+    LOG_ERR("Device %s PM locked", dev->name);
+    return err;
+
+  case -ENOSYS:
+    LOG_ERR("Device %s does not implement PM", dev->name);
+    return err;
+
+  default:
+    return err;
+  }
+}
+
+int probes_suspend(void) {
+  int err;
+
+  err = device_suspend(dev_air);
+  if (err != 0) {
+    return err;
+  }
+
+  err = device_suspend(dev_light);
+  if (err != 0) {
+    return err;
+  }
+
   return 0;
 }
 

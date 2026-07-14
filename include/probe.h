@@ -12,6 +12,7 @@ typedef struct reading_t {
 } reading_t;
 
 int probes_init(void);
+int probes_suspend(void);
 
 int read_air_probe(reading_t *);
 int read_light_probe(reading_t *);

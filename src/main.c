@@ -26,10 +26,16 @@ app_error_t app_get_error(void) { return app_error; }
 
 /*
   TODO: Build standby loop
-void event_standby(void){
-
-}
 */
+
+void event_standby(void) {
+  int err;
+
+  err = probes_suspend();
+  if (err != 0) {
+    app_set_error(APP_ERROR_FATAL);
+  }
+}
 
 void event_wake(void) {
   int err;
