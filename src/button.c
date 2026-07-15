@@ -40,7 +40,7 @@ static void input_cb(struct input_event *evt, void *user_data) {
   /* Toggles between standby and active operation */
   case INPUT_KEY_X:
     if (state == APP_STATE_STANDBY) {
-      app_set_state(APP_STATE_BACKGROUND);
+      app_set_state(APP_STATE_WAKING);
     } else {
       app_set_state(APP_STATE_STANDBY);
     }

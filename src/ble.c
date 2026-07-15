@@ -74,11 +74,32 @@ int ble_init(void) {
   int err = bt_enable(NULL);
   if (err != 0) {
     app_set_error(APP_ERROR_BLE_INIT);
-    LOG_ERR("Bluetooth init failed: %d", err);
+    LOG_ERR("Bluetooth enable failed: %d", err);
     return err;
   }
 
   LOG_INF("Bluetooth init success");
+
+  return 0;
+}
+
+int ble_suspend(void) {
+  if (!bt_is_ready()) {
+    return 0;
+  }
+
+  if (ble_conn != NULL) {
+    bt_conn_unref(ble_conn);
+    ble_conn = NULL;
+  }
+
+  can_notify = false;
+
+  int err = bt_disable();
+  if (err != 0) {
+    LOG_ERR("Bluetooth disable failed: %d", err);
+    return err;
+  }
 
   return 0;
 }

@@ -38,7 +38,7 @@ static int device_resume(const struct device *dev) {
   int err = pm_device_action_run(dev, PM_DEVICE_ACTION_RESUME);
   switch (err) {
   case 0:
-    LOG_INF("Device %s resuming", dev->name);
+    LOG_INF("Device %s resumed", dev->name);
     return 0;
 
   case -EALREADY:
@@ -102,7 +102,7 @@ static int device_suspend(const struct device *dev) {
   int err = pm_device_action_run(dev, PM_DEVICE_ACTION_SUSPEND);
   switch (err) {
   case 0:
-    LOG_INF("Device %s suspending", dev->name);
+    LOG_INF("Device %s suspended", dev->name);
     return 0;
 
   case -EALREADY:
