@@ -1,173 +1,119 @@
-# Sap
+# SAP
 
-Sensor Array for Plants (S.A.P) is an embedded project for the nRF52840 DK that utilizes the BME280 and VEML7700 sensors.
+Sensor Array for Plants (S.A.P) is an embedded application for the nRF52840 DK. It samples ambient conditions with a BME280 (temperature, pressure, humidity) and a VEML7700 (ambient light), signals state on three LEDs, and exposes readings over BLE.
 
-## Hardware Prototype
+The VEML7700 is driven by a custom out-of-tree Zephyr driver in [drivers/sensor/veml7700/](drivers/sensor/veml7700/). See [docs/architecture.md](docs/architecture.md) for the application state machine and the driver design.
+
+## Hardware
 
 ### Components
 
-- nRF52840 DK
-- Breadboard
-- Jumper wires
-- Adafruit BME280 2652
-- Adafruit VEML7700 4162
-- 2 × momentary push button
-- 1 × LED red
-- 1 × LED yellow
-- 1 × LED green
-- 3 × Resistors 470 Ω
+| Qty | Part                   | Notes               |
+| --: | ---------------------- | ------------------- |
+|   1 | nRF52840 DK            | Target board        |
+|   1 | Adafruit BME280 2652   | I2C, address `0x77` |
+|   1 | Adafruit VEML7700 4162 | I2C, address `0x10` |
+|   2 | Momentary push button  | Power, Pair         |
+|   3 | LED (red/yellow/green) | Status indication   |
+|   3 | Resistor 470 Ω         | One per LED, series |
+|   1 | Breadboard             |                     |
+|   - | Jumper wires           |                     |
 
+### Pin allocation
 
+| Function     | nRF52840 pin | External label | Notes                         |
+| ------------ | -----------: | -------------: | ----------------------------- |
+| I2C SDA      |      `P0.26` |          `SDA` | Shared by BME280 and VEML7700 |
+| I2C SCL      |      `P0.27` |          `SCL` | Shared by BME280 and VEML7700 |
+| Power button |      `P1.01` |           `D0` | Active low, internal pull-up  |
+| Pair button  |      `P1.02` |           `D1` | Active low, internal pull-up  |
+| Red LED      |      `P1.03` |           `D2` | PWM output                    |
+| Yellow LED   |      `P1.04` |           `D3` | PWM output                    |
+| Green LED    |      `P1.05` |           `D4` | PWM output                    |
 
-### Pin Allocation
+### Wiring
 
-| Function          | nRF52840 pin | External label | Notes                                 |
-| ----------------- | -----------: | -------------: | ------------------------------------- |
-| I2C SDA           |      `P0.26` |          `SDA` | Shared by BME280 and VEML7700         |
-| I2C SCL           |      `P0.27` |          `SCL` | Shared by BME280 and VEML7700         |
-| Button 1          |      `P1.01` |           `D0` | Active-low input with pull-up         |
-| Reserved button 2 |      `P1.02` |           `D1` | Reserved for second active-low button |
-| Red LED           |      `P1.03` |           `D2` | PWM-capable GPIO output               |
-| Yellow LED        |      `P1.04` |           `D3` | PWM-capable GPIO output               |
-| Green LED         |      `P1.05` |           `D4` | PWM-capable GPIO output               |
+Both sensors share one I2C bus (`i2c0`), so `SDA`, `SCL`, power and ground are common to both.
 
-### Topology
+**VEML7700 (Adafruit 4162)**
 
-```mermaid
-flowchart TD
-    DK[nRF52840 DK]
+| Sensor pin | Connects to | Wire   |
+| ---------- | ----------- | ------ |
+| `VIN`      | `VDD`       | red    |
+| `GND`      | `GND`       | black  |
+| `SCL`      | `P0.27`     | yellow |
+| `SDA`      | `P0.26`     | blue   |
 
-    subgraph BB[Breadboard - sensor bus]
-        PWR["+ rail<br/>VDD / ~3.0 V"]
-        GND["- rail<br/>GND"]
+**BME280 (Adafruit 2652)**
 
-        PWR46["power rail position 46"]
-        GND46["ground rail position 46"]
+| Sensor pin | Connects to | Wire   |
+| ---------- | ----------- | ------ |
+| `VIN`      | `VDD`       | red    |
+| `GND`      | `GND`       | black  |
+| `SCL`      | `P0.27`     | yellow |
+| `SDA`      | `P0.26`     | blue   |
 
-        PWR49["power rail position 49"]
-        GND49["ground rail position 49"]
+**Buttons**
 
-        VEML_VIN["59F<br/>VEML7700 VIN"]
-        VEML_GND["61F<br/>VEML7700 GND"]
-
-        SCL["row 62<br/>SCL bus<br/>62F / 62I / 62J"]
-        SDA["row 63<br/>SDA bus<br/>63F / 63I / 63J"]
-    end
-
-    VEML[VEML7700<br/>Adafruit 4162<br/>soldered header]
-    BME[BME280<br/>Adafruit 2652<br/>Qwiic/STEMMA QT lead]
-
-    DK -- "red<br/>VDD / VDD_nRF / ~3.0 V" --> PWR46
-    PWR46 --> PWR
-
-    DK -- "black<br/>GND" --> GND46
-    GND46 --> GND
-
-    DK -- "yellow<br/>P0.27 / SCL" --> SCL
-    DK -- "blue<br/>P0.26 / SDA" --> SDA
-
-    PWR -- "wire to VIN" --> VEML_VIN
-    GND -- "wire to GND" --> VEML_GND
-    VEML_VIN -- "VIN" --> VEML
-    VEML_GND -- "GND" --> VEML
-    SCL -- "62F / SCL" --> VEML
-    SDA -- "63F / SDA" --> VEML
-
-    PWR49 --> PWR
-    GND49 --> GND
-    PWR49 -- "red / VIN" --> BME
-    GND49 -- "black / GND" --> BME
-    SCL -- "yellow / SCL 62I" --> BME
-    SDA -- "blue / SDA 63I" --> BME
-```
-
-```mermaid
-flowchart TD
-    DK[nRF52840 DK]
-
-    subgraph BB[Breadboard - controls and status LEDs]
-        GND["- rail<br/>GND"]
-
-        BTN1["Button 1<br/>Power button"]
-        BTN2["Reserved Button 2<br/>Pair button"]
-
-        RR["Red LED<br/>series resistor"]
-        YR["Yellow LED<br/>series resistor"]
-        GR["Green LED<br/>series resistor"]
-
-        RLED["Red LED"]
-        YLED["Yellow LED"]
-        GLED["Green LED"]
-    end
-
-    DK -- "P1.01 / D0" --> BTN1
-    BTN1 -- "active-low<br/>press connects to GND" --> GND
-
-    DK -. "P1.02 / D1<br/>reserved" .-> BTN2
-    BTN2 -. "active-low<br/>press connects to GND" .-> GND
-
-    DK -- "P1.03 / D2" --> RR
-    RR --> RLED
-    RLED --> GND
-
-    DK -- "P1.04 / D3" --> YR
-    YR --> YLED
-    YLED --> GND
-
-    DK -- "P1.05 / D4" --> GR
-    GR --> GLED
-    GLED --> GND
-```
-
-### External Button Wiring
-
-The external button is wired as an active-low input:
+Both buttons are active low. The pin idles high through the internal pull-up and is pulled to ground when pressed, so no external resistor is needed.
 
 ```text
-P1.01 / D0 ---- button ---- GND
+P1.01 / D0 ---- power button ---- GND
+P1.02 / D1 ---- pair button ----- GND
 ```
 
-The pin should be configured with an internal pull-up:
+Configured in the overlay as:
 
 ```dts
 gpios = <&gpio1 1 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
 ```
 
-`P1.02 / D1` is reserved for the same wiring pattern if a second button is added later.
+**LEDs**
 
-### External LED Wiring
-
-Each external LED must have its own current-limiting resistor:
+Each LED needs its own series resistor. Driven by PWM so brightness can be varied (standby uses a dim red rather than full on).
 
 ```text
-P1.03 / D2 -> resistor -> red LED -> GND
-P1.04 / D3 -> resistor -> yellow LED -> GND
-P1.05 / D4 -> resistor -> green LED -> GND
+P1.03 / D2 ---- 470 Ω ---- red LED ----- GND
+P1.04 / D3 ---- 470 Ω ---- yellow LED -- GND
+P1.05 / D4 ---- 470 Ω ---- green LED --- GND
 ```
 
----
+## Build and flash
 
-## Setup
+Board target is `nrf52840dk/nrf52840`.
 
-**Overlay**
+```bash
+west build -b nrf52840dk/nrf52840
+west flash
+```
 
-[Overlay](./boards/nrf52840dk_nrf52840.overlay)
+Use a pristine build after changing devicetree, Kconfig, or the module layout:
 
-**Config**
+```bash
+west build -b nrf52840dk/nrf52840 -p
+```
 
-[Config](prj.conf)
+Configuration lives in [prj.conf](prj.conf) and the board overlay in [boards/nrf52840dk_nrf52840.overlay](boards/nrf52840dk_nrf52840.overlay).
 
----
+Note that `CONFIG_VEML7700=n` and `CONFIG_VEML7700_CUSTOM=y`: the in-tree Vishay driver is disabled so the out-of-tree driver owns the device.
 
-## Testing
+## Bring-up verification
 
-### Sensor Test
+The shell commands below need options that are commented out in [prj.conf](prj.conf) by default. Enable them for a bring-up build:
 
-**I2C Scan**
+```conf
+CONFIG_SHELL=y
+CONFIG_I2C_SHELL=y
+CONFIG_SENSOR_SHELL=y
+```
+
+### Bus scan
+
+Confirms both sensors acknowledge on the shared bus.
 
 `i2c scan i2c@40003000`
 
-```bash
+```text
 00:             -- -- -- -- -- -- -- -- -- -- -- --
 10: 10 -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -179,26 +125,28 @@ P1.05 / D4 -> resistor -> green LED -> GND
 2 devices found on i2c@40003000
 ```
 
-**Sensor Test**
+`0x10` is the VEML7700, `0x77` is the BME280.
 
-_1. BME280_
+### Sensor read
+
+**BME280**
 
 `sensor get bme280@77`
 
-```bash
+```text
 channel type=13(ambient_temp) index=0 shift=16 num_samples=1 value=14470775997ns (24.899993)
 channel type=14(press) index=0 shift=23 num_samples=1 value=14470775997ns (102.027343)
 channel type=16(humidity) index=0 shift=21 num_samples=1 value=14470775997ns (76.375976)
 ```
 
-_2. VEML7700_
+**VEML7700**
 
 `sensor get veml7700@10`
 
-```bash
-channel type=18(light) index=0 shift=4 num_samples=1 value=211120086669ns (11.000000)
-```
+Reports `type=18(light)` in lux. The custom driver encodes lux as q31 with `shift=18`, so the reported shift differs from older captures taken against the in-tree driver.
 
-### Button Test
+> Sample output not yet recaptured against the custom driver. Re-run and paste.
 
-### LED Test
+### Button and LED checks
+
+> Not yet documented.

@@ -110,8 +110,8 @@ void event_paired(void) {
   /*
     Budget JSON serializer
   */
-  snprintf(msg, sizeof(msg), "{\"t\":%.1f,\"p\":%.1f,\"h\":%.1f,\"l\":%u}",
-           (double)r.temp, (double)r.pres, (double)r.humi, r.lux);
+  snprintf(msg, sizeof(msg), "{\"t\":%.1f,\"p\":%.1f,\"h\":%.1f,\"l\":%1f}",
+           (double)r.temp, (double)r.pres, (double)r.humi, (double)r.lux);
 
   ble_set_reading(msg);
 }

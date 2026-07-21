@@ -25,6 +25,8 @@ LOG_MODULE_REGISTER(sensors, LOG_LEVEL_INF);
 SENSOR_DT_READ_IODEV(iodev_air, AIR_NODE, {SENSOR_CHAN_AMBIENT_TEMP, 0},
                      {SENSOR_CHAN_PRESS, 0}, {SENSOR_CHAN_HUMIDITY, 0});
 
+SENSOR_DT_READ_IODEV(iodev_light, LIGHT_NODE, {SENSOR_CHAN_LIGHT, 0});
+
 RTIO_DEFINE(ctx, 1, 1);
 
 /* Pointer to device reference */
@@ -230,24 +232,32 @@ int read_air_probe(reading_t *out) {
 }
 
 /*
-    TODO: Add 'Read and Decode' support to veml7700 driver? (research)
+    Reads and decodes a single lux sample from the veml7700 sensor
 */
 int read_light_probe(reading_t *out) {
-  struct sensor_value data;
+  uint8_t buf[BUFFER_SIZE];
 
-  int err = sensor_sample_fetch_chan(dev_light, SENSOR_CHAN_LIGHT);
+  /* Sensor read into buffer */
+  int err = sensor_read(&iodev_light, &ctx, buf, BUFFER_SIZE);
   if (err != 0) {
-    LOG_ERR("Device: %s fetch failed", dev_light->name);
+    LOG_ERR("Device: %s read failed", dev_light->name);
     return err;
   }
 
-  err = sensor_channel_get(dev_light, SENSOR_CHAN_LIGHT, &data);
+  /* Fetching of decoder api */
+  const struct sensor_decoder_api *decoder;
+  err = sensor_get_decoder(dev_light, &decoder);
   if (err != 0) {
-    LOG_ERR("Device: %s get channel failed. Errno: %d", dev_light->name, err);
+    LOG_ERR("Device: %s get decoder failed", dev_light->name);
     return err;
   }
 
-  out->lux = (uint32_t)data.val1;
+  /* Light channel read and decoded to float lux */
+  err = decode_channel(decoder, buf, SENSOR_CHAN_LIGHT, &out->lux);
+  if (err != 0) {
+    LOG_ERR("Device %s light decode failed: %d", dev_light->name, err);
+    return err;
+  }
 
   return 0;
 }

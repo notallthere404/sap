@@ -1,0 +1,4 @@
+name: veml7700_custom
+build:
+  cmake: .
+  kconfig: Kconfig

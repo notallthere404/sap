@@ -1,0 +1,3 @@
+# Out-of-tree vendor prefixes for this application.
+# Format: <vendor-prefix><TAB><Full name of vendor>
+custom	Custom out-of-tree bindings

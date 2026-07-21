@@ -77,8 +77,9 @@
 
     veml7700: veml7700@10 {
         status = "okay";
-        compatible = "vishay,veml7700";
+        compatible = "custom,veml7700";
         reg = <0x10>;
+        psm-mode = <0x00>;
     };
 };
 

@@ -8,7 +8,7 @@ typedef struct reading_t {
   float temp;
   float pres;
   float humi;
-  uint32_t lux;
+  float lux;
 } reading_t;
 
 int probes_init(void);

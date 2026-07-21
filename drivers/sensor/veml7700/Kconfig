@@ -1,0 +1,8 @@
+
+config VEML7700_CUSTOM
+	bool "Vishay VEML7700 ambient light sensor"
+	default y
+	depends on DT_HAS_CUSTOM_VEML7700_ENABLED
+	select I2C
+	help
+	  Enable Vishay VEML7700 ambient light sensor driver.
